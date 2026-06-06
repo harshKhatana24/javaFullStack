@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JDBC Handwritten Notes</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#d0c9b8;font-family:'Kalam',cursive;color:#1a1a2e;padding:30px 20px;min-height:100vh;}
+
+.notebook-cover{
+  background:linear-gradient(160deg,#1a237e 0%,#283593 60%,#1565c0 100%);
+  color:white;padding:40px 48px;border-radius:6px 6px 0 0;
+  position:relative;overflow:hidden;
+  box-shadow:0 4px 0 #0d1257,0 8px 20px rgba(0,0,0,0.4);
+}
+.notebook-cover::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(255,255,255,0.03) 8px,rgba(255,255,255,0.03) 9px);
+}
+.cover-title{font-family:'Caveat',cursive;font-size:56px;font-weight:700;line-height:1.1;position:relative;}
+.cover-sub{font-family:'Kalam',cursive;font-size:17px;opacity:0.8;margin-top:8px;position:relative;}
+.cover-badge{
+  position:absolute;top:30px;right:40px;
+  background:#fdd835;color:#1a237e;
+  font-family:'Caveat',cursive;font-size:18px;font-weight:700;
+  padding:10px 18px;border-radius:50%;transform:rotate(8deg);
+  box-shadow:2px 2px 8px rgba(0,0,0,0.3);width:100px;height:100px;
+  display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;
+}
+.cover-topics{
+  font-size:13px;opacity:0.65;margin-top:14px;position:relative;
+  font-style:italic;
+}
+
+.notebook{
+  background:#fdf9f0;position:relative;
+  box-shadow:4px 4px 20px rgba(0,0,0,0.25),-2px 0 0 #e8e0d0;
+  border-radius:0 0 4px 4px;
+}
+.notebook::before{
+  content:'';position:absolute;inset:0;border-radius:0 0 4px 4px;
+  background-image:repeating-linear-gradient(transparent,transparent 31px,#b8d4e8 31px,#b8d4e8 32px);
+  background-position:0 40px;pointer-events:none;z-index:0;
+}
+.notebook::after{
+  content:'';position:absolute;top:0;left:68px;bottom:0;
+  width:2px;background:rgba(220,80,80,0.35);z-index:1;
+}
+
+.spiral{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  display:flex;gap:28px;padding:0 20px;z-index:10;
+}
+.ring{
+  width:18px;height:26px;border:3px solid #888;border-radius:50%;
+  background:#d0c9b8;margin-top:-13px;box-shadow:1px 1px 3px rgba(0,0,0,0.2);
+}
+
+.page{position:relative;z-index:2;padding:20px 36px 40px 84px;max-width:900px;margin:0 auto;}
+
+.page-title{font-family:'Caveat',cursive;font-size:40px;font-weight:700;color:#1a237e;line-height:1.2;margin-bottom:2px;margin-top:6px;}
+.page-date{font-size:13px;color:#90a4ae;font-style:italic;margin-bottom:16px;}
+
+.section-head{
+  font-family:'Caveat',cursive;font-size:24px;font-weight:700;color:#1a237e;
+  margin:22px 0 8px;display:inline-block;position:relative;
+}
+.section-head::after{
+  content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;
+  background:#fdd835;transform:rotate(-0.4deg);
+}
+
+/* Architecture layers */
+.arch-layer{
+  padding:7px 16px;border-radius:4px;text-align:center;
+  font-size:14px;font-family:'Kalam',cursive;margin:3px 0;position:relative;
+}
+.arch-arrow{text-align:center;color:#90a4ae;font-size:20px;line-height:1;}
+
+/* Tables */
+.ht{width:100%;border-collapse:separate;border-spacing:0;margin:8px 0;font-size:13.5px;}
+.ht th{background:#1a237e;color:#fdd835;padding:6px 10px;font-family:'Caveat',cursive;font-size:15px;font-weight:700;text-align:left;}
+.ht th:first-child{border-radius:4px 0 0 0;} .ht th:last-child{border-radius:0 4px 0 0;}
+.ht td{padding:5px 10px;border-bottom:1px solid #b8d4e8;line-height:1.55;vertical-align:top;}
+.ht tr:nth-child(even) td{background:rgba(187,222,251,0.2);}
+.ht td:first-child{font-family:'Courier New',monospace;font-size:12px;color:#1a237e;font-weight:bold;white-space:nowrap;}
+
+/* Code block */
+.code{
+  font-family:'Courier New',monospace;background:#263238;color:#cfd8dc;
+  padding:12px 16px;border-radius:6px;font-size:12.5px;line-height:1.75;
+  margin:8px 0;position:relative;transform:rotate(0.15deg);
+}
+.code-lbl{position:absolute;top:-9px;right:12px;background:#1a237e;color:#fdd835;font-family:'Kalam',cursive;font-size:11px;padding:1px 8px;border-radius:4px;}
+.kw{color:#80cbc4;font-weight:bold;} .str{color:#f48fb1;} .cm{color:#78909c;font-style:italic;} .cls{color:#81d4fa;} .num{color:#ffcc80;}
+
+/* Boxes */
+.hb{padding:10px 14px;margin:8px 0;border-left:4px solid;border-radius:2px;font-size:14px;line-height:1.7;}
+.hb.yellow{background:rgba(255,243,128,0.55);border-color:#fdd835;}
+.hb.blue{background:rgba(187,222,251,0.45);border-color:#1976d2;}
+.hb.red{background:rgba(255,205,210,0.45);border-color:#e53935;}
+.hb.green{background:rgba(200,230,201,0.45);border-color:#388e3c;}
+.hb.purple{background:rgba(225,190,231,0.35);border-color:#7b1fa2;}
+
+/* Star note */
+.star{font-size:13.5px;color:#c62828;margin:4px 0;line-height:1.6;}
+.star::before{content:'★  ';}
+
+/* Step row */
+.step-row{display:flex;align-items:flex-start;gap:14px;margin:9px 0;font-size:14px;line-height:1.6;}
+.step-num{
+  background:#fdd835;color:#1a237e;font-family:'Caveat',cursive;font-weight:700;font-size:17px;
+  width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:1px;box-shadow:2px 2px 0 rgba(0,0,0,0.15);
+}
+
+/* Two column */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:10px 0;}
+
+/* ACID */
+.acid-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0;}
+.acid-card{background:#e8eaf6;border-top:3px solid #3f51b5;padding:8px;border-radius:4px;text-align:center;}
+.acid-letter{font-family:'Caveat',cursive;font-size:28px;font-weight:700;color:#1a237e;line-height:1.2;}
+.acid-word{font-weight:700;font-size:13px;color:#1a237e;}
+.acid-desc{font-size:11.5px;color:#555;margin-top:3px;line-height:1.35;}
+
+/* Isolation mini-table */
+.iso{display:grid;grid-template-columns:2.2fr 1fr 1.2fr 1fr;gap:2px;margin:8px 0;font-size:12px;}
+.iso-cell{padding:4px 6px;border:0.5px solid #b8d4e8;line-height:1.4;}
+.iso-cell.head{background:#1a237e;color:#fdd835;font-family:'Caveat',cursive;font-size:13px;font-weight:700;}
+.yes{color:#c62828;font-weight:bold;} .no{color:#388e3c;font-weight:bold;}
+
+/* IQ box */
+.iq{background:rgba(227,242,253,0.5);border:1.5px solid #90caf9;border-radius:6px;padding:10px 14px;margin:8px 0;font-size:13.5px;}
+.iq-q{font-family:'Caveat',cursive;font-size:17px;font-weight:700;color:#1a237e;margin-bottom:4px;}
+.iq-cos{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
+.badge{font-family:'Kalam',cursive;font-size:11px;padding:1px 7px;border-radius:3px;color:white;font-weight:700;}
+.google{background:#1e7e34;} .amazon{background:#c0500a;} .apple{background:#444;} .microsoft{background:#0050a0;} .meta{background:#1a40a0;} .netflix{background:#a01010;} .tcs{background:#2a6090;} .infosys{background:#005090;}
+.iq-a{color:#333;line-height:1.65;font-size:13px;}
+
+/* Rules */
+.rules{background:rgba(255,248,204,0.6);border:2px solid #fdd835;border-radius:6px;padding:12px 16px;margin:12px 0;}
+.rule-item{display:flex;gap:10px;margin:5px 0;font-size:13.5px;line-height:1.6;}
+.rule-num{font-family:'Caveat',cursive;font-size:16px;font-weight:700;color:#c62828;min-width:24px;}
+
+/* Divider */
+.div{border:none;border-top:1.5px dashed #90a4ae;margin:18px 0;}
+
+/* Footer */
+.footer{text-align:center;font-size:13px;color:#90a4ae;font-style:italic;margin-top:24px;padding-bottom:20px;}
+
+/* Sticky notes */
+.sticky{background:#fff9c4;padding:12px 14px;display:inline-block;font-size:14px;line-height:1.7;box-shadow:3px 3px 6px rgba(0,0,0,0.15);margin:6px;}
+.sticky.pink{background:#fce4ec;transform:rotate(-1.5deg);}
+.sticky.green{background:#e8f5e9;transform:rotate(0.8deg);}
+
+code{font-family:'Courier New',monospace;font-size:12.5px;background:rgba(0,0,0,0.08);padding:1px 5px;border-radius:3px;color:#1a237e;}
+b,strong{color:#1a237e;}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div style="max-width:900px;margin:0 auto;">
+<div class="notebook-cover">
+  <div class="cover-badge">★<br>Interview<br>Ready</div>
+  <div class="cover-title">JDBC<br>Ultimate Notes</div>
+  <div class="cover-sub">Complete Reference — Core Concepts + All Missing Topics + Real Interview Qs</div>
+  <div class="cover-topics">Architecture · Interfaces · Lifecycle · Transactions · Batch · CallableStatement · Pooling · JDBC 4.0 · Metadata · Exceptions · ORM</div>
+  <div style="margin-top:16px;opacity:0.5;font-size:12px;position:relative;">Google · Amazon · Apple · Microsoft · Meta · Netflix · TCS · Infosys · Wipro · Adobe</div>
+</div>
+
+<!-- SPIRAL RINGS -->
+<div style="background:#c8c0ae;height:22px;position:relative;display:flex;align-items:center;justify-content:center;gap:28px;border-left:4px solid #a8a090;border-right:4px solid #a8a090;">
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+  <div style="width:22px;height:30px;border:3px solid #777;border-radius:50%;background:#d0c9b8;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+</div>
+
+<!-- NOTEBOOK BODY -->
+<div class="notebook">
+<div class="page">
+
+  <div class="page-title">JDBC — Quick Reference ☕</div>
+  <div class="page-date">Java Interview Prep — Backend Track</div>
+
+  <!-- ARCHITECTURE -->
+  <div class="section-head">① Architecture</div>
+  <div style="font-size:14px;margin:8px 0 6px;line-height:1.7;">JDBC = <b>Java Database Connectivity</b> — a <em>set of interfaces</em> in <code>java.sql</code>. Vendors supply the implementation JAR. It's NOT a class!</div>
+
+  <div style="max-width:500px;margin:10px auto;">
+    <div class="arch-layer" style="background:#1a237e;color:white;font-family:'Caveat',cursive;font-size:16px;font-weight:700;">Java Application</div>
+    <div class="arch-arrow">↓</div>
+    <div class="arch-layer" style="background:#e8eaf6;border:1.5px dashed #3f51b5;"><b>JDBC API</b> <span style="color:#777;font-size:13px;">(java.sql interfaces — NOT implementation)</span></div>
+    <div class="arch-arrow">↓</div>
+    <div class="arch-layer" style="background:#e3f2fd;border:1.5px solid #90caf9;"><b>DriverManager</b> <span style="color:#777;font-size:13px;">— Router / Registry Layer</span></div>
+    <div class="arch-arrow">↓</div>
+    <div class="arch-layer" style="background:#fff8e1;border:1.5px solid #fdd835;"><b>Vendor Driver JAR</b> <span style="color:#777;font-size:13px;">e.g. com.mysql.cj.jdbc.Driver</span></div>
+    <div class="arch-arrow">↓</div>
+    <div class="arch-layer" style="background:#e8f5e9;border:1.5px solid #66bb6a;"><b>Target RDBMS</b> <span style="color:#777;font-size:13px;">MySQL / Oracle / PostgreSQL</span></div>
+  </div>
+  <div class="star">JDBC is NOT a class — it is a set of interfaces. Vendor JAR contains the actual implementation.</div>
+
+  <hr class="div">
+
+  <!-- INTERFACES -->
+  <div class="section-head">② Core Interfaces</div>
+  <table class="ht" style="margin-top:10px;">
+    <tr><th>Interface</th><th>Package</th><th>Role</th></tr>
+    <tr><td>DriverManager</td><td>java.sql</td><td>Utility class. Manages drivers. Factory for Connection objects.</td></tr>
+    <tr><td>Connection</td><td>java.sql</td><td>Open socket session to DB. Creates Statement objects. Manages transactions.</td></tr>
+    <tr><td>Statement</td><td>java.sql</td><td>Sends static hardcoded SQL. ⚠️ Vulnerable to injection if user input concatenated.</td></tr>
+    <tr><td>PreparedStatement</td><td>java.sql</td><td>Pre-compiles parameterized SQL with ? placeholders. ✅ Immune to injection. Cached.</td></tr>
+    <tr><td>CallableStatement</td><td>java.sql</td><td>Executes stored procedures. Extends PreparedStatement.</td></tr>
+    <tr><td>ResultSet</td><td>java.sql</td><td>Forward-moving cursor over tabular results. Starts before row 1.</td></tr>
+    <tr><td>DatabaseMetaData</td><td>java.sql</td><td>Info about the DB: tables, columns, driver version, supported features.</td></tr>
+    <tr><td>ResultSetMetaData</td><td>java.sql</td><td>Info about a ResultSet: column count, names, data types.</td></tr>
+  </table>
+
+  <hr class="div">
+
+  <!-- 7-STEP LIFECYCLE -->
+  <div class="section-head">③ 7-Step JDBC Lifecycle</div>
+
+  <div class="step-row">
+    <div class="step-num">1</div>
+    <div><b>Import Package</b><br><code>import java.sql.*;</code></div>
+  </div>
+
+  <div class="step-row">
+    <div class="step-num">2</div>
+    <div style="width:100%;"><b>Load Driver — Old vs JDBC 4.0</b>
+      <div class="two-col" style="margin-top:6px;">
+        <div class="hb red" style="font-size:12.5px;">
+          <b>Old (JDBC &lt; 4.0):</b><br>
+          <code>Class.forName("com.mysql.cj.jdbc.Driver");</code><br>
+          <span style="font-size:11.5px;color:#777;">↳ fires static{} block → registerDriver()</span>
+        </div>
+        <div class="hb green" style="font-size:12.5px;">
+          <b>JDBC 4.0+ AUTO 🎉</b><br>
+          Just add driver JAR to classpath!<br>
+          <span style="font-size:11.5px;color:#555;">SPI reads META-INF/services/java.sql.Driver automatically. No Class.forName() needed!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-row">
+    <div class="step-num">3</div>
+    <div style="width:100%;"><b>Establish Connection</b>
+      <div class="code" style="margin-top:6px;font-size:12px;">
+        <div class="code-lbl">Java</div>
+        <span class="cm">// URL format: jdbc:subprotocol://host:port/database</span><br>
+        <span class="cls">Connection</span> con = <span class="cls">DriverManager</span>.getConnection(<span class="str">"jdbc:mysql://localhost:3306/mydb"</span>,<span class="str">"root"</span>,<span class="str">"pass"</span>);<br><br>
+        <span class="cm">// DataSource — POOLED — use in production ✅</span><br>
+        <span class="cls">DataSource</span> ds = <span class="kw">new</span> <span class="cls">HikariDataSource</span>(config);<br>
+        <span class="cls">Connection</span> con = ds.getConnection();
+      </div>
+      <div class="star">URL format: jdbc : subprotocol :// host : port / database</div>
+    </div>
+  </div>
+
+  <div class="step-row">
+    <div class="step-num">4</div>
+    <div style="width:100%;"><b>Create Statement Object</b>
+      <div class="code" style="margin-top:6px;font-size:12px;">
+        <div class="code-lbl">Java</div>
+        <span class="cls">Statement</span> st  = con.createStatement();  <span class="cm">// static SQL</span><br>
+        <span class="cls">PreparedStatement</span> pst = con.prepareStatement(<span class="str">"SELECT * FROM t WHERE id=?"</span>);<br>
+        <span class="cls">CallableStatement</span> cst = con.prepareCall(<span class="str">"{call myProcedure(?,?)}"</span>);
+      </div>
+    </div>
+  </div>
+
+  <div class="step-row">
+    <div class="step-num">5</div>
+    <div style="width:100%;"><b>Execute SQL</b>
+      <div class="code" style="margin-top:6px;font-size:12px;">
+        <div class="code-lbl">Java</div>
+        <span class="cls">ResultSet</span> rs = st.executeQuery(<span class="str">"SELECT * FROM students"</span>);  <span class="cm">// DQL → ResultSet</span><br>
+        <span class="kw">int</span> n  = st.executeUpdate(<span class="str">"INSERT INTO students VALUES(1,'A',90)"</span>);  <span class="cm">// DML → int</span><br>
+        <span class="kw">boolean</span> b = st.execute(<span class="str">"..."</span>);  <span class="cm">// Either → true=ResultSet, false=int</span><br><br>
+        pst.setInt(<span class="num">1</span>, <span class="num">101</span>); pst.setString(<span class="num">2</span>, <span class="str">"Navin"</span>);<br>
+        <span class="cls">ResultSet</span> rs = pst.executeQuery();  <span class="cm">// no SQL string here!</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-row">
+    <div class="step-num">6</div>
+    <div style="width:100%;"><b>Process ResultSet</b>
+      <div class="code" style="margin-top:6px;font-size:12px;">
+        <div class="code-lbl">Java</div>
+        <span class="kw">while</span>(rs.next()) {  <span class="cm">// cursor moves forward; returns false at end</span><br>
+        &nbsp;&nbsp;<span class="kw">int</span>    id   = rs.getInt(<span class="str">"student_id"</span>);  <span class="cm">// by column name</span><br>
+        &nbsp;&nbsp;<span class="cls">String</span> name = rs.getString(<span class="num">2</span>);  <span class="cm">// by 1-based index!</span><br>
+        &nbsp;&nbsp;<span class="kw">double</span> gpa  = rs.getDouble(<span class="str">"gpa"</span>);<br>
+        }
+      </div>
+      <div class="star">Columns are 1-indexed. rs.getInt(0) throws SQLException!</div>
+    </div>
+  </div>
+
+  <div class="step-row">
+    <div class="step-num">7</div>
+    <div style="width:100%;"><b>Close Resources</b>
+      <div class="two-col" style="margin-top:6px;">
+        <div class="code" style="font-size:11.5px;">
+          <span class="cm">// Old — explicit finally block</span><br>
+          <span class="kw">try</span> {<br>
+          &nbsp;&nbsp;con=<span class="cls">DriverManager</span>.getConnection(...);<br>
+          } <span class="kw">finally</span> {<br>
+          &nbsp;&nbsp;<span class="kw">if</span>(rs!=<span class="kw">null</span>) rs.close();<br>
+          &nbsp;&nbsp;<span class="kw">if</span>(st!=<span class="kw">null</span>) st.close();<br>
+          &nbsp;&nbsp;<span class="kw">if</span>(con!=<span class="kw">null</span>) con.close();  <span class="cm">// reverse!</span><br>
+          }
+        </div>
+        <div class="code" style="font-size:11.5px;">
+          <span class="cm">// Modern — try-with-resources Java 7+ ✅</span><br>
+          <span class="kw">try</span> (<span class="cls">Connection</span> con=...;<br>
+          &nbsp;&nbsp;&nbsp;&nbsp; <span class="cls">Statement</span> st=...;<br>
+          &nbsp;&nbsp;&nbsp;&nbsp; <span class="cls">ResultSet</span> rs=...) {<br>
+          &nbsp;&nbsp;<span class="kw">while</span>(rs.next()){<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// process</span><br>
+          &nbsp;&nbsp;}<br>
+          }  <span class="cm">// auto .close() here!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- SQL INJECTION -->
+  <div class="section-head">④ SQL Injection &amp; PreparedStatement</div>
+  <div class="hb red" style="margin-top:10px;">
+    <b>⚠️ EXPLOIT:</b> Input <code>admin'--</code> makes query:<br>
+    <code>SELECT * FROM users WHERE username='admin'--' AND password='xyz'</code><br>
+    The <code>--</code> comments out the password check. Attacker logs in as admin with NO password!
+  </div>
+
+  <div class="code" style="font-size:12px;">
+    <div class="code-lbl">Security</div>
+    <span class="cm">// ❌ VULNERABLE — never concatenate user input!</span><br>
+    <span class="cls">String</span> q = <span class="str">"SELECT * FROM users WHERE user='"</span> + input + <span class="str">"'"</span>;<br><br>
+    <span class="cm">// ✅ SAFE — PreparedStatement</span><br>
+    <span class="cls">String</span> q = <span class="str">"SELECT * FROM users WHERE user=? AND pass=?"</span>;<br>
+    <span class="cls">PreparedStatement</span> pst = con.prepareStatement(q);  <span class="cm">// compiled once</span><br>
+    pst.setString(<span class="num">1</span>, userInput);  pst.setString(<span class="num">2</span>, passInput);<br>
+    <span class="cls">ResultSet</span> rs = pst.executeQuery();  <span class="cm">// values sent separately — never parsed as SQL</span>
+  </div>
+
+  <table class="ht" style="margin-top:10px;">
+    <tr><th>Attribute</th><th>Statement ❌</th><th>PreparedStatement ✅</th></tr>
+    <tr><td>Compilation</td><td>Parse+Compile every call</td><td>Compiled ONCE, plan reused</td></tr>
+    <tr><td>SQL Injection</td><td>VULNERABLE</td><td>IMMUNE</td></tr>
+    <tr><td>Performance</td><td>Slow for repeated queries</td><td>Fast — cached execution plan</td></tr>
+    <tr><td>Input binding</td><td>Appended into raw SQL</td><td>Bound via setX(index, val)</td></tr>
+    <tr><td>Use case</td><td>One-time static queries only</td><td>Always prefer — especially user input</td></tr>
+    <tr><td>execute()</td><td>st.executeQuery(sqlString)</td><td>pst.setX(); pst.executeQuery() — no arg!</td></tr>
+  </table>
+
+  <hr class="div">
+
+  <!-- TRANSACTIONS -->
+  <div class="section-head">⑤ Transactions — commit, rollback, savepoints</div>
+  <div style="font-size:14px;margin:8px 0 6px;line-height:1.7;">A <b>transaction</b> = unit of work: <em>fully committed or fully rolled back</em>. JDBC is <b>auto-commit by default</b>!</div>
+
+  <div class="code" style="font-size:12px;">
+    <div class="code-lbl">Transactions</div>
+    con.setAutoCommit(<span class="kw">false</span>);  <span class="cm">// Step 1: disable auto-commit</span><br>
+    <span class="kw">try</span> {<br>
+    &nbsp;&nbsp;st.executeUpdate(<span class="str">"UPDATE accounts SET balance=balance-500 WHERE id=1"</span>);<br>
+    &nbsp;&nbsp;st.executeUpdate(<span class="str">"UPDATE accounts SET balance=balance+500 WHERE id=2"</span>);<br>
+    &nbsp;&nbsp;con.commit();  <span class="cm">// Step 3: commit if all OK</span><br>
+    } <span class="kw">catch</span> (<span class="cls">SQLException</span> e) {<br>
+    &nbsp;&nbsp;con.rollback();  <span class="cm">// Step 4: rollback on failure</span><br>
+    } <span class="kw">finally</span> {<br>
+    &nbsp;&nbsp;con.setAutoCommit(<span class="kw">true</span>);  <span class="cm">// restore default</span><br>
+    }
+  </div>
+
+  <div style="margin-top:10px;font-family:'Caveat',cursive;font-size:17px;font-weight:700;color:#1a237e;">ACID Properties:</div>
+  <div class="acid-grid">
+    <div class="acid-card"><div class="acid-letter">A</div><div class="acid-word">Atomicity</div><div class="acid-desc">All or nothing — commit/rollback</div></div>
+    <div class="acid-card"><div class="acid-letter">C</div><div class="acid-word">Consistency</div><div class="acid-desc">DB stays valid — app logic</div></div>
+    <div class="acid-card"><div class="acid-letter">I</div><div class="acid-word">Isolation</div><div class="acid-desc">No interference — setTransactionIsolation()</div></div>
+    <div class="acid-card"><div class="acid-letter">D</div><div class="acid-word">Durability</div><div class="acid-desc">Committed data persists — DB engine</div></div>
+  </div>
+
+  <div style="font-family:'Caveat',cursive;font-size:16px;font-weight:700;color:#1a237e;margin:12px 0 4px;">Isolation Levels:</div>
+  <div class="iso">
+    <div class="iso-cell head">Level</div><div class="iso-cell head">Dirty Read</div><div class="iso-cell head">Non-Repeatable</div><div class="iso-cell head">Phantom</div>
+    <div class="iso-cell"><code>READ_UNCOMMITTED</code></div><div class="iso-cell yes">YES</div><div class="iso-cell yes">YES</div><div class="iso-cell yes">YES</div>
+    <div class="iso-cell"><code>READ_COMMITTED</code></div><div class="iso-cell no">No</div><div class="iso-cell yes">YES</div><div class="iso-cell yes">YES</div>
+    <div class="iso-cell"><code>REPEATABLE_READ</code></div><div class="iso-cell no">No</div><div class="iso-cell no">No</div><div class="iso-cell yes">YES</div>
+    <div class="iso-cell"><code>SERIALIZABLE</code></div><div class="iso-cell no">No</div><div class="iso-cell no">No</div><div class="iso-cell no">No</div>
+  </div>
+  <div style="font-size:13px;color:#555;margin:4px 0 0 8px;">↳ <code>con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);</code></div>
+
+  <hr class="div">
+
+  <!-- BATCH + CALLABLE -->
+  <div class="two-col">
+    <div>
+      <div class="section-head">⑥ Batch Processing</div>
+      <div style="font-size:13.5px;margin:8px 0;line-height:1.7;">Instead of N separate INSERTs (N round trips), send all in <b>one network call!</b></div>
+      <div class="code" style="font-size:11.5px;">
+        <div class="code-lbl">Batch</div>
+        con.setAutoCommit(<span class="kw">false</span>);<br>
+        <span class="cls">PreparedStatement</span> pst = con.prepareStatement(<span class="str">"INSERT INTO t VALUES(?,?,?)"</span>);<br><br>
+        <span class="kw">for</span> (<span class="cls">Student</span> s : list) {<br>
+        &nbsp;&nbsp;pst.setInt(<span class="num">1</span>, s.getId());<br>
+        &nbsp;&nbsp;pst.setString(<span class="num">2</span>, s.getName());<br>
+        &nbsp;&nbsp;pst.addBatch();  <span class="cm">// queue it</span><br>
+        }<br>
+        <span class="kw">int</span>[] results = pst.executeBatch();  <span class="cm">// one trip!</span><br>
+        con.commit();
+      </div>
+      <div class="hb purple" style="font-size:12.5px;margin-top:8px;">💡 Commit every 500-1000 rows, not all at once — large transactions hold locks longer!</div>
+    </div>
+    <div>
+      <div class="section-head">⑦ CallableStatement</div>
+      <div style="font-size:13.5px;margin:8px 0;line-height:1.7;">Executes <b>stored procedures</b> — supports IN / OUT / INOUT params</div>
+      <div class="code" style="font-size:11.5px;">
+        <div class="code-lbl">CallableStatement</div>
+        <span class="cls">CallableStatement</span> cst =<br>
+        &nbsp;&nbsp;con.prepareCall(<span class="str">"{call getStudentById(?,?)}"</span>);<br><br>
+        cst.setInt(<span class="num">1</span>, <span class="num">101</span>);  <span class="cm">// IN param — you set it</span><br>
+        cst.registerOutParameter(<span class="num">2</span>, <span class="cls">Types</span>.VARCHAR);  <span class="cm">// OUT param</span><br>
+        cst.execute();<br>
+        <span class="cls">String</span> name = cst.getString(<span class="num">2</span>);  <span class="cm">// retrieve OUT</span>
+      </div>
+      <table class="ht" style="margin-top:8px;font-size:12px;">
+        <tr><th>Type</th><th>Direction</th><th>Set By</th></tr>
+        <tr><td>IN</td><td>Input to procedure</td><td>You (caller)</td></tr>
+        <tr><td>OUT</td><td>Output from DB</td><td>Database</td></tr>
+        <tr><td>INOUT</td><td>Both</td><td>Both</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- CONNECTION POOLING -->
+  <div class="section-head">⑧ Connection Pooling — Production Essential</div>
+  <div class="hb red" style="margin-top:10px;">
+    <b>⚠️ Problem:</b> Creating a new DB connection = ~100-200ms (TCP handshake + auth + session). For 1000 req/sec → catastrophic!<br>
+    <b>✅ Solution:</b> Connection Pool — cache of pre-opened connections reused across requests.
+  </div>
+
+  <div class="two-col" style="margin-top:10px;">
+    <div>
+      <div class="code" style="font-size:11.5px;">
+        <div class="code-lbl">HikariCP</div>
+        <span class="cls">HikariConfig</span> cfg = <span class="kw">new</span> <span class="cls">HikariConfig</span>();<br>
+        cfg.setJdbcUrl(<span class="str">"jdbc:mysql://localhost/mydb"</span>);<br>
+        cfg.setMaximumPoolSize(<span class="num">10</span>);  <span class="cm">// max 10 connections</span><br>
+        cfg.setMinimumIdle(<span class="num">2</span>);      <span class="cm">// keep 2 ready always</span><br>
+        cfg.setConnectionTimeout(<span class="num">30000</span>);  <span class="cm">// 30s timeout</span><br><br>
+        <span class="cls">DataSource</span> ds = <span class="kw">new</span> <span class="cls">HikariDataSource</span>(cfg);<br>
+        <span class="kw">try</span> (<span class="cls">Connection</span> con = ds.getConnection()) {<br>
+        &nbsp;&nbsp;<span class="cm">// returned to pool on .close()!</span><br>
+        }
+      </div>
+    </div>
+    <div>
+      <table class="ht" style="font-size:12px;">
+        <tr><th>Pool Library</th><th>Speed</th><th>Used In</th></tr>
+        <tr><td>HikariCP</td><td>⚡ Fastest</td><td>Spring Boot default</td></tr>
+        <tr><td>Apache DBCP</td><td>Medium</td><td>Legacy Spring apps</td></tr>
+        <tr><td>c3p0</td><td>Slow</td><td>Old Hibernate default</td></tr>
+        <tr><td>Vibur</td><td>Fast</td><td>Modern apps</td></tr>
+      </table>
+      <table class="ht" style="margin-top:8px;font-size:12px;">
+        <tr><th>Aspect</th><th>DriverManager</th><th>DataSource</th></tr>
+        <tr><td>Speed</td><td>~100-200ms</td><td>&lt;1ms from pool</td></tr>
+        <tr><td>Pooling</td><td>None</td><td>Built-in</td></tr>
+        <tr><td>JNDI</td><td>No</td><td>Yes</td></tr>
+        <tr><td>Use</td><td>Dev / testing</td><td>ALWAYS in prod</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- EXCEPTIONS + ORM -->
+  <div class="two-col">
+    <div>
+      <div class="section-head">⑨ SQLException Hierarchy</div>
+      <div class="code" style="font-size:11.5px;margin-top:8px;">
+        <div class="code-lbl">Exception Handling</div>
+        } <span class="kw">catch</span> (<span class="cls">SQLException</span> e) {<br>
+        &nbsp;&nbsp;e.getMessage();   <span class="cm">// human-readable error</span><br>
+        &nbsp;&nbsp;e.getSQLState();   <span class="cm">// "23000" = dup key</span><br>
+        &nbsp;&nbsp;e.getErrorCode();  <span class="cm">// vendor int code</span><br>
+        &nbsp;&nbsp;e.getNextException();  <span class="cm">// chained errors</span><br>
+        }
+      </div>
+      <table class="ht" style="font-size:12px;margin-top:6px;">
+        <tr><th>Class</th><th>When Thrown</th></tr>
+        <tr><td>SQLWarning</td><td>Non-fatal (must poll)</td></tr>
+        <tr><td>DataTruncation</td><td>Data truncated on write</td></tr>
+        <tr><td>BatchUpdateException</td><td>Error in executeBatch()</td></tr>
+        <tr><td>SQLTimeoutException</td><td>Query exceeded timeout</td></tr>
+        <tr><td>SQLIntegrityConstraint…</td><td>PK / unique violation</td></tr>
+        <tr><td>SQLSyntaxErrorException</td><td>Malformed SQL syntax</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="section-head">⑩ JDBC vs ORM</div>
+      <table class="ht" style="font-size:12px;margin-top:8px;">
+        <tr><th>Aspect</th><th>JDBC</th><th>Hibernate/JPA</th></tr>
+        <tr><td>Level</td><td>Low-level SQL</td><td>High-level OOP</td></tr>
+        <tr><td>SQL writing</td><td>Manual</td><td>Auto-generated</td></tr>
+        <tr><td>Boilerplate</td><td>High</td><td>Low (annotations)</td></tr>
+        <tr><td>Performance</td><td>Best (tuned)</td><td>N+1 problem risk</td></tr>
+        <tr><td>Caching</td><td>None (DIY)</td><td>L1 + L2 built-in</td></tr>
+        <tr><td>Portability</td><td>DB-specific SQL</td><td>HQL is DB-agnostic</td></tr>
+        <tr><td>Use when</td><td>Batch/reports</td><td>Standard CRUD</td></tr>
+      </table>
+      <div class="hb yellow" style="font-size:12.5px;margin-top:8px;">
+        <b>N+1 problem:</b> Fetch 1 list → N extra queries for each item's details. JDBC: you write one JOIN. Hibernate: lazy loading silently causes N+1!
+      </div>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- INTERVIEW QUESTIONS -->
+  <div class="section-head">⑪ Real Interview Questions</div>
+  <div style="font-size:13px;color:#777;font-style:italic;margin:6px 0 10px;">Google · Amazon · Apple · Microsoft · Meta · Netflix · TCS · Infosys</div>
+
+  <div class="iq">
+    <div class="iq-q">Q: What is the difference between Statement, PreparedStatement, and CallableStatement?</div>
+    <div class="iq-cos"><span class="badge google">Google</span><span class="badge amazon">Amazon</span><span class="badge apple">Apple</span><span class="badge microsoft">Microsoft</span></div>
+    <div class="iq-a">Statement: static SQL, compiled every time, injection-vulnerable. PreparedStatement: parameterized, compiled once, injection-immune, fast for repeats. CallableStatement: stored procedures, supports IN/OUT/INOUT params.</div>
+  </div>
+
+  <div class="iq" style="transform:rotate(0.2deg);">
+    <div class="iq-q">Q: Why is PreparedStatement preferred over Statement?</div>
+    <div class="iq-cos"><span class="badge amazon">Amazon</span><span class="badge meta">Meta</span><span class="badge google">Google</span></div>
+    <div class="iq-a">3 reasons: 1) Security — prevents SQL injection. 2) Performance — pre-compiled, execution plan cached and reused. 3) Readability — cleaner code with setX() methods instead of string concatenation.</div>
+  </div>
+
+  <div class="iq" style="transform:rotate(-0.2deg);">
+    <div class="iq-q">Q: What is connection pooling? Why is it needed?</div>
+    <div class="iq-cos"><span class="badge google">Google</span><span class="badge amazon">Amazon</span><span class="badge apple">Apple</span><span class="badge microsoft">Microsoft</span></div>
+    <div class="iq-a">Pool = cache of pre-created connections reused across requests. Needed because creating a new connection = ~100-200ms. For high-traffic apps, creating per-request connections is a bottleneck. Spring Boot uses HikariCP by default.</div>
+  </div>
+
+  <div class="iq">
+    <div class="iq-q">Q: What happens if you don't close a JDBC connection?</div>
+    <div class="iq-cos"><span class="badge amazon">Amazon</span><span class="badge apple">Apple</span><span class="badge tcs">TCS</span></div>
+    <div class="iq-a">Connection leak! Pool exhaustion — connections never returned to pool. Eventually DB hits max_connections limit and refuses new connections. Always use try-with-resources.</div>
+  </div>
+
+  <div class="iq" style="transform:rotate(0.15deg);">
+    <div class="iq-q">Q: What are ACID properties?</div>
+    <div class="iq-cos"><span class="badge microsoft">Microsoft</span><span class="badge meta">Meta</span><span class="badge netflix">Netflix</span></div>
+    <div class="iq-a">Atomicity: all-or-nothing. Consistency: DB moves between valid states. Isolation: concurrent transactions don't interfere. Durability: committed changes survive failures. JDBC handles Atomicity via commit/rollback; Isolation via setTransactionIsolation().</div>
+  </div>
+
+  <div class="iq">
+    <div class="iq-q">Q: Can ResultSet be used after connection is closed?</div>
+    <div class="iq-cos"><span class="badge google">Google</span><span class="badge microsoft">Microsoft</span></div>
+    <div class="iq-a">No! ResultSet is tied to Connection. Closing it invalidates the ResultSet — accessing it throws SQLException. Copy data into List&lt;Map&gt; before closing if needed later.</div>
+  </div>
+
+  <div class="iq" style="transform:rotate(-0.1deg);">
+    <div class="iq-q">Q: What is the difference between setFetchSize() and setMaxRows()?</div>
+    <div class="iq-cos"><span class="badge google">Google</span><span class="badge amazon">Amazon</span></div>
+    <div class="iq-a">setFetchSize(n): hints to driver how many rows to fetch per network round trip (performance, does NOT limit total rows). setMaxRows(n): hard limit — extra rows silently discarded.</div>
+  </div>
+
+  <div class="iq">
+    <div class="iq-q">Q: How do you handle a stored procedure with OUT parameters?</div>
+    <div class="iq-cos"><span class="badge google">Google</span><span class="badge microsoft">Microsoft</span></div>
+    <div class="iq-a">Use CallableStatement: con.prepareCall("{call proc(?,?)}"). For OUT params: cst.registerOutParameter(index, Types.VARCHAR) before execute(). After cst.execute(), retrieve with cst.getString(index).</div>
+  </div>
+
+  <div class="iq" style="transform:rotate(0.2deg);">
+    <div class="iq-q">Q: What is batch processing in JDBC? How do you implement it?</div>
+    <div class="iq-cos"><span class="badge amazon">Amazon</span><span class="badge microsoft">Microsoft</span><span class="badge infosys">Infosys</span></div>
+    <div class="iq-a">Sending multiple statements in one network call to reduce round trips. Use pst.addBatch() in a loop, then pst.executeBatch() once. With setAutoCommit(false) and commit every 500-1000 rows — much faster than individual executeUpdate() for bulk inserts.</div>
+  </div>
+
+  <hr class="div">
+
+  <!-- GOLDEN RULES -->
+  <div class="section-head">⑫ Golden Rules — Remember These!</div>
+  <div class="rules" style="margin-top:10px;">
+    <div class="rule-item"><span class="rule-num">#1</span><span>ALWAYS use PreparedStatement for user input — NEVER concatenate strings into SQL.</span></div>
+    <div class="rule-item"><span class="rule-num">#2</span><span>ALWAYS use try-with-resources — Connection, Statement, ResultSet all implement AutoCloseable.</span></div>
+    <div class="rule-item"><span class="rule-num">#3</span><span>ResultSet column indices are <b>1-based</b>. rs.getInt(1) = first column. rs.getInt(0) = exception!</span></div>
+    <div class="rule-item"><span class="rule-num">#4</span><span>executeQuery() → ResultSet | executeUpdate() → int row count | execute() → boolean.</span></div>
+    <div class="rule-item"><span class="rule-num">#5</span><span>JDBC 4.0+ does NOT need Class.forName(). Just add the driver JAR to classpath — SPI handles the rest.</span></div>
+    <div class="rule-item"><span class="rule-num">#6</span><span>Use DataSource + HikariCP in production. NEVER use DriverManager in a web/enterprise app.</span></div>
+    <div class="rule-item"><span class="rule-num">#7</span><span>Transactions: setAutoCommit(false) → execute statements → commit() or rollback() in catch.</span></div>
+    <div class="rule-item"><span class="rule-num">#8</span><span>Batch: addBatch() in a loop, executeBatch() once. Commit every 500-1000 rows for best performance.</span></div>
+    <div class="rule-item"><span class="rule-num">#9</span><span>CallableStatement for stored procedures: {call proc(?,?)} syntax. registerOutParameter() for OUT args.</span></div>
+    <div class="rule-item"><span class="rule-num">#10</span><span>Close resources in reverse order: ResultSet → Statement → Connection.</span></div>
+    <div class="rule-item"><span class="rule-num">#11</span><span>Catch SQLException specifically. Check getSQLState() and getErrorCode() for specific error types.</span></div>
+    <div class="rule-item"><span class="rule-num">#12</span><span>For NULL insertion use pst.setNull(index, Types.X) — never pass Java null directly.</span></div>
+    <div class="rule-item"><span class="rule-num">#13</span><span>setFetchSize() = performance hint (rows per fetch). setMaxRows() = hard limit on row count.</span></div>
+    <div class="rule-item"><span class="rule-num">#14</span><span>Default ResultSet: TYPE_FORWARD_ONLY + CONCUR_READ_ONLY. Specify type if you need scrolling.</span></div>
+    <div class="rule-item"><span class="rule-num">#15</span><span>Can ResultSet be used after connection closed? NO — always copy data into a collection before closing.</span></div>
+  </div>
+
+  <!-- COMPLETE FLOW BANNER -->
+  <div style="background:#1a237e;border:2px solid #fdd835;border-radius:6px;padding:14px 18px;margin:16px 0;font-family:'Courier New',monospace;font-size:12.5px;color:#e8eaf6;line-height:1.9;">
+    <div style="font-family:'Caveat',cursive;font-size:16px;color:#fdd835;font-weight:700;margin-bottom:8px;">★ Complete JDBC Flow:</div>
+    <span style="color:#90caf9;">import java.sql.*</span>
+    → <span style="color:#aed581;">Class.forName() / JDBC4 auto</span>
+    → <span style="color:#81d4fa;">DriverManager.getConnection()</span>
+    → <span style="color:#f48fb1;">con.prepareStatement()</span><br>
+    → <span style="color:#ffcc80;">pst.setX() / addBatch()</span>
+    → <span style="color:#80cbc4;">executeQuery() / executeBatch()</span>
+    → <span style="color:#ce93d8;">while(rs.next()) { rs.getX() }</span><br>
+    → <span style="color:#aed581;">commit() / rollback()</span>
+    → <span style="color:#90caf9;">try-with-resources auto-close ✅</span>
+  </div>
+
+  <!-- STICKY NOTES ROW -->
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0;margin:16px -10px 0;">
+    <div class="sticky" style="transform:rotate(-2deg);">
+      <b>Remember! 🔑</b><br>
+      JDBC = interfaces<br>
+      Vendor = implementation<br>
+      NOT the same!
+    </div>
+    <div class="sticky pink">
+      <b>SQL Injection 💀</b><br>
+      Always PreparedStatement<br>
+      when using user input!<br>
+      No exceptions!
+    </div>
+    <div class="sticky green" style="transform:rotate(1.5deg);">
+      <b>Production checklist ✅</b><br>
+      HikariCP pool<br>
+      DataSource (not DM)<br>
+      try-with-resources<br>
+      Transactions!
+    </div>
+    <div class="sticky" style="transform:rotate(-1deg);background:#e8f4fd;">
+      <b>JDBC 4.0+ 🎉</b><br>
+      No Class.forName()!<br>
+      SPI auto-discovers<br>
+      from JAR classpath
+    </div>
+  </div>
+
+  <div class="footer">JDBC Ultimate Interview Notes · Complete Reference · Good luck in your interview! ✌️</div>
+
+</div>
+</div>
+</div>
+
+</body>
+</html>
