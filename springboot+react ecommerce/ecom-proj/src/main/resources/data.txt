@@ -1,0 +1,12 @@
+-- INSERT INTO PRODUCT
+-- (ID, NAME, BRAND, DESCRIPTION, PRICE, CATEGORY, RELEASE_DATE, PRODUCT_AVAILABLE, STOCK_QUANTITY)
+-- VALUES
+--     (101, 'iPhone 15', 'Apple', 'Apple smartphone with A16 chip', 79999, 'Electronics', '2023-09-22', TRUE, 50),
+--
+--     (201, 'Samsung Galaxy S24', 'Samsung', 'Flagship Android smartphone', 74999, 'Electronics', '2024-01-17', TRUE, 40),
+--
+--     (301, 'Dell Inspiron 15', 'Dell', '15-inch laptop', 59999, 'Laptops', '2023-08-10', TRUE, 25),
+--
+--     (401, 'Sony WH-1000XM5', 'Sony', 'Noise cancelling headphones', 29999, 'Accessories', '2022-05-12', TRUE, 60),
+--
+--     (501, 'Apple Watch Series 9', 'Apple', 'Smartwatch', 41999, 'Wearables', '2023-09-12', TRUE, 35);
